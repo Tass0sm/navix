@@ -19,6 +19,7 @@
 
 
 from __future__ import annotations
+import functools
 import jax
 
 import jax.numpy as jnp

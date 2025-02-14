@@ -39,6 +39,59 @@ from .registry import register_env
 class Room(Environment):
     random_start: bool = struct.field(pytree_node=False, default=False)
 
+    def get_n_unique_states(self) -> int:
+        n_player_states = (self.height - 2) * (self.width - 2) * 4
+        n_goal_states = (self.height - 2) * (self.width - 2)
+        # player and goal or just player
+        if self.random_start:
+            n_unique_states = n_player_states * n_goal_states
+        else:
+            n_unique_states = n_player_states
+        return n_unique_states
+
+    def get_unique_id_obs_fn(self) -> Array:
+        """Reduces state to a unique observation id, for use with tabular Q
+        learning.
+
+        Args:
+            state (State): The current state of the game.
+
+        Returns:
+            Array: An integer, where the integer uniquely identifies the observation.
+
+        """
+
+        def unique_id(state: State):
+            # TODO: This is hardcoded for the non-random empty room environment. Find a way to
+            # easily generalize to the other environments.
+            full_width, full_height = state.grid.shape
+            width, height = full_width - 2, full_height - 2
+            n_player_states = width * height * 4
+            n_free_spaces = width * height
+
+            if self.random_start:
+                goal = state.get_entity("goal")
+                g_position = goal.position[0] # assuming only one goal
+                g_index = jnp.asarray((g_position[0] - 1) * height + (g_position[1] - 1), dtype=jnp.int32)
+
+                player = state.get_player()
+                p_position = player.position
+                p_direction = player.direction
+                p_index = jnp.asarray((p_position[0] - 1) * height + (p_position[1] - 1), dtype=jnp.int32)
+                p_index = (p_index * 4) + p_direction
+
+                unique_id = (g_index * n_player_states) + p_index
+                return jnp.expand_dims(unique_id, -1)
+            else:
+                player = state.get_player()
+                position = player.position
+                direction = player.direction
+                index = jnp.asarray((position[0] - 1) * height + (position[1] - 1), dtype=jnp.int32)
+                unique_id = index * 4 + direction
+                return jnp.expand_dims(unique_id, -1)
+
+        return unique_id
+
     def _reset(self, key: Array, cache: Union[RenderingCache, None] = None) -> Timestep:
         key, k1, k2 = jax.random.split(key, 3)
 

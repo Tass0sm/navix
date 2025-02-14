@@ -153,6 +153,14 @@ class Environment(struct.PyTreeNode):
     def _reset(self, key: Array, cache: RenderingCache | None = None) -> Timestep:
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_n_unique_states(self) -> int:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_unique_id_obs_fn(self) -> int:
+        raise NotImplementedError()
+
     def reset(self, key: Array, cache: RenderingCache | None = None) -> Timestep:
         k1, k2 = jax.random.split(key)
         timestep = self._reset(k1, cache)
